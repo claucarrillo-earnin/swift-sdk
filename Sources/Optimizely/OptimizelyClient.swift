@@ -178,10 +178,11 @@ open class OptimizelyClient: NSObject {
     public func start(datafile: Data,
                       doUpdateConfigOnNewDatafile: Bool = false,
                       doFetchDatafileBackground: Bool = true) throws {
-        let cachedDatafile = self.sdkKey.isEmpty ? nil :datafileHandler?.loadSavedDatafile(sdkKey: self.sdkKey)
-        let selectedDatafile = cachedDatafile ?? datafile
-        
-        try configSDK(datafile: selectedDatafile)
+        // For now: only use the local Data file provided; ignore cache.
+        // let cachedDatafile = self.sdkKey.isEmpty ? nil :datafileHandler?.loadSavedDatafile(sdkKey: self.sdkKey)
+        // let selectedDatafile = cachedDatafile ?? datafile
+        // try configSDK(datafile: selectedDatafile)
+        try configSDK(datafile: datafile)
         
         // continue to fetch updated datafile from the server in background and cache it for next sessions
         
