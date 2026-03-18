@@ -19,10 +19,15 @@ import Foundation
 private enum OptimizelySDKPerf {
     static let notificationName = Notification.Name("com.earnin.optimizely.sdk.performance_phase")
     static func report(phase: String, durationMs: Double) {
+        report(phase: phase, durationMs: durationMs, extra: nil)
+    }
+    static func report(phase: String, durationMs: Double, extra: [String: Any]?) {
+        var userInfo: [String: Any] = ["phase": phase, "duration_ms": durationMs]
+        extra?.forEach { userInfo[$0.key] = $0.value }
         NotificationCenter.default.post(
             name: notificationName,
             object: nil,
-            userInfo: ["phase": phase, "duration_ms": durationMs]
+            userInfo: userInfo
         )
     }
 }
@@ -762,7 +767,16 @@ open class OptimizelyClient: NSObject {
         guard let config = self.config else { throw OptimizelyError.sdkNotReady }
         let __perfStart = CFAbsoluteTimeGetCurrent()
         let __result = OptimizelyConfigImp(projectConfig: config, logger: logger)
-        OptimizelySDKPerf.report(phase: "OptimizelyConfig_build", durationMs: (CFAbsoluteTimeGetCurrent() - __perfStart) * 1000)
+        let durationMs = (CFAbsoluteTimeGetCurrent() - __perfStart) * 1000
+        OptimizelySDKPerf.report(
+            phase: "OptimizelyConfig_build",
+            durationMs: durationMs,
+            extra: [
+                "experiment_count": __result.experimentsMap.count,
+                "feature_flag_count": __result.featuresMap.count,
+                "audience_count": __result.audiences.count
+            ]
+        )
         return __result
     }
 }
