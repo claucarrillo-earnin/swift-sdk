@@ -127,7 +127,6 @@ struct OptimizelyConfigImp: OptimizelyConfig {
             }
         }
         self.audiences = audiences
-        OptimizelyConfigPerf.report(phase: "OptimizelyConfig_audiences", durationMs: (CFAbsoluteTimeGetCurrent() - t0) * 1000)
         
         // update experiment data:
         // - copy feature's variable data to variables in all variations
@@ -135,6 +134,7 @@ struct OptimizelyConfigImp: OptimizelyConfig {
         
         // prepare an audience [id: name] mapping for audiences serialization
         let audiencesMap = Dictionary(uniqueKeysWithValues: audiences.map { ($0.id, $0.name) })
+        OptimizelyConfigPerf.report(phase: "OptimizelyConfig_audiences", durationMs: (CFAbsoluteTimeGetCurrent() - t0) * 1000)
 
         let t1 = CFAbsoluteTimeGetCurrent()
         let updatedExperiments = projectConfig.allExperiments.map { experiment -> Experiment in
