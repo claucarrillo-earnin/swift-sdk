@@ -16,6 +16,16 @@
 
 import Foundation
 
+private enum OptimizelyConfigPerf {
+    static func report(phase: String, durationMs: Double) {
+        NotificationCenter.default.post(
+            name: Notification.Name("com.earnin.optimizely.sdk.performance_phase"),
+            object: nil,
+            userInfo: ["phase": phase, "duration_ms": durationMs]
+        )
+    }
+}
+
 /// A data model of public project configuration
 
 public protocol OptimizelyConfig {
@@ -106,6 +116,7 @@ struct OptimizelyConfigImp: OptimizelyConfig {
         self.attributes = project.attributes
         self.events = project.events
 
+        let t0 = CFAbsoluteTimeGetCurrent()
         // merge [typedAudiences, audiences] in ProjectConfig to a single audiences array.
         // typedAudiences has a higher priority.
         var audiences = project.typedAudiences ?? []
@@ -116,6 +127,7 @@ struct OptimizelyConfigImp: OptimizelyConfig {
             }
         }
         self.audiences = audiences
+        OptimizelyConfigPerf.report(phase: "OptimizelyConfig_audiences", durationMs: (CFAbsoluteTimeGetCurrent() - t0) * 1000)
         
         // update experiment data:
         // - copy feature's variable data to variables in all variations
@@ -124,11 +136,14 @@ struct OptimizelyConfigImp: OptimizelyConfig {
         // prepare an audience [id: name] mapping for audiences serialization
         let audiencesMap = Dictionary(uniqueKeysWithValues: audiences.map { ($0.id, $0.name) })
 
+        let t1 = CFAbsoluteTimeGetCurrent()
         let updatedExperiments = projectConfig.allExperiments.map { experiment -> Experiment in
             let feature = project.featureFlags.filter({ $0.experimentIds.contains(experiment.id) }).first
             return updateExperiment(experiment: experiment, feature: feature, audiencesMap: audiencesMap)
         }
+        OptimizelyConfigPerf.report(phase: "OptimizelyConfig_updatedExperiments", durationMs: (CFAbsoluteTimeGetCurrent() - t1) * 1000)
         
+        let t2 = CFAbsoluteTimeGetCurrent()
         let updatedRollouts = projectConfig.project.rollouts.map { rollout -> Rollout in
             let feature = project.featureFlags.filter({ $0.rolloutId == rollout.id }).first
             
@@ -138,9 +153,15 @@ struct OptimizelyConfigImp: OptimizelyConfig {
             }
             return updatedRollout
         }
+        OptimizelyConfigPerf.report(phase: "OptimizelyConfig_updatedRollouts", durationMs: (CFAbsoluteTimeGetCurrent() - t2) * 1000)
         
+        let t3 = CFAbsoluteTimeGetCurrent()
         self.experimentsMap = makeExperimentsMap(project: project, experiments: updatedExperiments, logger: logger)
+        OptimizelyConfigPerf.report(phase: "OptimizelyConfig_makeExperimentsMap", durationMs: (CFAbsoluteTimeGetCurrent() - t3) * 1000)
+        
+        let t4 = CFAbsoluteTimeGetCurrent()
         self.featuresMap = makeFeaturesMap(project: project, experiments: updatedExperiments, rollouts: updatedRollouts)
+        OptimizelyConfigPerf.report(phase: "OptimizelyConfig_makeFeaturesMap", durationMs: (CFAbsoluteTimeGetCurrent() - t4) * 1000)
     }
 }
 
