@@ -16,6 +16,18 @@
 
 import Foundation
 
+private enum OptimizelySDKPerf {
+    static let notificationName = Notification.Name("com.earnin.optimizely.sdk.performance_phase")
+    static func report(phase: String, durationMs: Double) {
+        NotificationCenter.default.post(
+            name: notificationName,
+            object: nil,
+            userInfo: ["phase": phase, "duration_ms": durationMs]
+        )
+    }
+}
+
+
 public typealias OptimizelyAttributes = [String: Any?]
 public typealias OptimizelyEventTags = [String: Any]
 
@@ -188,7 +200,9 @@ open class OptimizelyClient: NSObject {
     
     func configSDK(datafile: Data) throws {
         do {
+            let __perfStart = CFAbsoluteTimeGetCurrent()
             self.config = try ProjectConfig(datafile: datafile)
+            OptimizelySDKPerf.report(phase: "ProjectConfig_init", durationMs: (CFAbsoluteTimeGetCurrent() - __perfStart) * 1000)
             
             datafileHandler?.startUpdates(sdkKey: self.sdkKey) { data in
                 // new datafile came in
@@ -207,9 +221,11 @@ open class OptimizelyClient: NSObject {
     }
     
     func updateConfigFromBackgroundFetch(data: Data) {
+        let __perfStart = CFAbsoluteTimeGetCurrent()
         guard let config = try? ProjectConfig(datafile: data) else {
             return
         }
+        OptimizelySDKPerf.report(phase: "updateConfigFromBackgroundFetch_parse", durationMs: (CFAbsoluteTimeGetCurrent() - __perfStart) * 1000)
         
         // if a download fails for any reason, the cached datafile is returned
         // check and see if the revisions are the same and don't update if they are
@@ -744,8 +760,10 @@ open class OptimizelyClient: NSObject {
     /// - Throws: `OptimizelyError` if SDK is not ready
     public func getOptimizelyConfig() throws -> OptimizelyConfig {
         guard let config = self.config else { throw OptimizelyError.sdkNotReady }
-        
-        return OptimizelyConfigImp(projectConfig: config, logger: logger)
+        let __perfStart = CFAbsoluteTimeGetCurrent()
+        let __result = OptimizelyConfigImp(projectConfig: config, logger: logger)
+        OptimizelySDKPerf.report(phase: "OptimizelyConfig_build", durationMs: (CFAbsoluteTimeGetCurrent() - __perfStart) * 1000)
+        return __result
     }
 }
 
